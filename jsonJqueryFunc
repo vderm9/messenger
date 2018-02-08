@@ -1,46 +1,3 @@
-//Initialize Firebase
-firebase.initializeApp({databaseURL: "https://shippy-ac235.firebaseio.com/"});
-var dbRef = firebase.database();
-var archived_tasks = dbRef.ref('archived_tasks');
-var contactsRef = dbRef.ref('todoist_tasks_times');
-var timer_instance = contactsRef.child('current_timer')
-var historical_times = contactsRef.child('historical_times')
-
-
-
-
-
-
-
-//run task timer 
-function running_task_timer(timer_instance_dictionary){
-    var now = moment().valueOf()  //now is the time right now
-    start_time_instance = moment(timer_instance_dictionary.start_time).valueOf()
-    var elapsed = now - start_time_instance;
-    time_text_value = moment(elapsed).subtract({hours: 19}); //have to subtract 19 hours for some reason
-    time_text = time_text_value.format("HH:mm:ss")
-    $("span[field='current_task_start_time_elapsed']").html(time_text)
-  }
-
-//check if there is any currently running tasks
-// if there is a task, start the timer with setinterval
-timer_instance.on('value', function(snapshot) {
-  timer_instance_dictionary = snapshot.val()
-  if (timer_instance_dictionary != null){
-    $("span[field='current_task_name']").html(timer_instance_dictionary.content)
-    timer_interval =  setInterval(running_task_timer,1000,timer_instance_dictionary)
-  }
-});
-
-
-
-
-
-
-
-
-
-
 //todoist functions
 //pull todoist tasks
 function todoist_current_tasks_pull(){
@@ -88,3 +45,20 @@ function todoist_completed_tasks_with_offset(offset) {
     });
     return results.responseJSON.items
   }
+
+
+//Since todoist only lets you pull 50 tasks at a time, we're going to use a loop to get the first 50, then the second 50, then the third 50 tasks, etc. 
+//when it's pulling empty lists, it can stop 
+//we're going to use a while loop here (read more here: https://www.w3schools.com/js/js_loop_while.asp)
+function todoist_completed_tasks_all(){
+  todoist_tasks_pulled = []
+  iterator = 0 
+  master_list = []
+  while (todoist_tasks_pulled.length == 50|| iterator==0) { //if todoist pulls 50 tasks, then it should try again. when it pulls less, we know that it's the last loop we need to do. since the first loop will be less than 50 tasks length, i put in or clause that is iterator is 0 which will only be when it does the first loop
+    limit_variable = 50 * iterator //this will go into the todoist completed tasks query
+    todoist_tasks_pulled = todoist_completed_tasks_with_offset(limit_variable)//this is the list of tasks 
+    master_list = master_list.concat(todoist_tasks_pulled)
+    iterator += 1; //this will be 1 in the first loop, 2 in the second loop, etc. 
+  }
+  return master_list
+}
