@@ -1,0 +1,90 @@
+//Initialize Firebase
+firebase.initializeApp({databaseURL: "https://shippy-ac235.firebaseio.com/"});
+var dbRef = firebase.database();
+var archived_tasks = dbRef.ref('archived_tasks');
+var contactsRef = dbRef.ref('todoist_tasks_times');
+var timer_instance = contactsRef.child('current_timer')
+var historical_times = contactsRef.child('historical_times')
+
+
+
+
+
+
+
+//run task timer 
+function running_task_timer(timer_instance_dictionary){
+    var now = moment().valueOf()  //now is the time right now
+    start_time_instance = moment(timer_instance_dictionary.start_time).valueOf()
+    var elapsed = now - start_time_instance;
+    time_text_value = moment(elapsed).subtract({hours: 19}); //have to subtract 19 hours for some reason
+    time_text = time_text_value.format("HH:mm:ss")
+    $("span[field='current_task_start_time_elapsed']").html(time_text)
+  }
+
+//check if there is any currently running tasks
+// if there is a task, start the timer with setinterval
+timer_instance.on('value', function(snapshot) {
+  timer_instance_dictionary = snapshot.val()
+  if (timer_instance_dictionary != null){
+    $("span[field='current_task_name']").html(timer_instance_dictionary.content)
+    timer_interval =  setInterval(running_task_timer,1000,timer_instance_dictionary)
+  }
+});
+
+
+
+
+
+
+
+
+
+
+//todoist functions
+//pull todoist tasks
+function todoist_current_tasks_pull(){
+ return $.ajax({
+      type: "GET",
+      url: 'https://en.todoist.com/api/v7/sync/',
+      dataType: 'json',
+      async: false,
+      data: {
+        'token': 'a14f98a6b546b044dbb84bcd8eee47fbe3788671',
+        'sync_token':'*',
+        'resource_types':'["items","labels","projects"]'
+      }
+    }).responseJSON
+}
+
+function todoist_delete_task(task_id){
+  $.ajax({
+      type: "GET",
+      url: 'https://en.todoist.com/api/v7/sync/',
+      dataType: 'json',
+      async: false,
+      data: {
+        'token': 'a14f98a6b546b044dbb84bcd8eee47fbe3788671',
+        'sync_token':'*',
+        'resource_types':'["items"]',
+        'commands':'[{"type": "item_delete", "uuid": "f8539c77-7fd7-4846-afad-3b201f0be8a5", "args": {"ids": ['+String(task_id)+']}}]'
+      }
+    })
+}
+
+
+function todoist_completed_tasks_with_offset(offset) {
+    results = $.ajax({
+      type: "GET",
+      url: 'https://en.todoist.com/api/v7/completed/get_all',
+      dataType: 'json',
+      async: false,
+      data: {
+        'token': 'a14f98a6b546b044dbb84bcd8eee47fbe3788671',
+        'since': '2017-12-30T10:00',
+        'limit':'50',
+        'offset':offset
+      }
+    });
+    return results.responseJSON.items
+  }
